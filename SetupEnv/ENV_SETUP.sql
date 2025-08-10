@@ -53,8 +53,8 @@ GRANT ROLE CICD_ROLE TO USER CICD_USER;
 /* I use Keypair auth so here is have to set it up:
 using OpenSSL on local machine. Run this commands in the terminal
 
-This command creates a 2048-bit RSA private key:
-openssl genrsa -out snowflake_cicd_key.p8 2048
+This command generates a private key and encrypts it using the AES 256 algorithm, which will prompt you to enter and verify a passphrase. REMEMBER FOR THIS PASSPHRASE
+openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out snowflake_cicd_key.p8 -v2 aes-256-cbc
 
 Generates public key:
 openssl rsa -in snowflake_cicd_key.p8 -pubout -out snowflake_cicd_key.pub
@@ -66,6 +66,6 @@ So end of the day we have 2 files:
 
 -- Add the publick key to the user:
 ALTER USER CICD_USER
-    SET RSA_PUBLIC_KEY = 'putyourkeyhere';
+    SET RSA_PUBLIC_KEY = 'putyourpublichere_withouttheBEGINandENDPUBLICKEY_and_inoneline';
 
 
