@@ -14,18 +14,22 @@ jobs:
     steps:
       # Use the official SnowSQL action
       - name: Run simple query on Snowflake
-        uses: snowflakedb/snowsql-action@v1.7.0
-        with:
-          # Pass in all the secrets you just created
-          snowflake_account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          snowflake_user: ${{ secrets.SNOWFLAKE_USER }}
-          snowflake_warehouse: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          snowflake_role: ${{ secrets.SNOWFLAKE_ROLE }}
-          snowflake_database: ${{ secrets.SNOWFLAKE_DATABASE }}
-          snowflake_private_key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
-          snowflake_private_key_passphrase: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
+        uses: snowflakedb/snowflake-cli-action@v1.5
+        env:
+          
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.CICD_DEMO_DB }} # Corrected to match your setup
+              
+          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+          SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }} # Note the different name
 
-          # A simple query to verify the connection and context
-          query: |
-            SELECT CURRENT_USER() as "USER", CURRENT_ROLE() as "ROLE", CURRENT_WAREHOUSE() as "WAREHOUSE", CURRENT_DATABASE() as "DATABASE";
-            SELECT 1 + 1 as "RESULT";
+        run: |
+          # Use the 'snow' command to run queries
+          echo "Testing connection and context..."
+          snow sql -q "SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE(), CURRENT_DATABASE()"
+
+          echo "Running a simple query..."
+          snow sql -q "SELECT 1 + 1 as RESULT"
