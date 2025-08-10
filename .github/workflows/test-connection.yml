@@ -24,6 +24,11 @@ jobs:
       SNOWFLAKE_AUTHENTICATOR: 'SNOWFLAKE_JWT'
 
     steps:
+      - name: Verify Secret Length
+        shell: bash
+        run: |
+          SECRET_LENGTH=$(echo -n "${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}" | wc -c)
+          echo "The secret has been loaded and its length is: ${SECRET_LENGTH} characters."
       # Step 1: Installs and configures the Snow CLI using the job-level env vars
       - name: Setup Snow CLI
         uses: snowflakedb/snowflake-cli-action@v1.5
