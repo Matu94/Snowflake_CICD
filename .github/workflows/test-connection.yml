@@ -33,5 +33,5 @@ jobs:
           snow --version
 
           echo "Testing connection and running queries..."
-          snow sql -q "SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE(), CURRENT_DATABASE()"
-          snow sql -q "SELECT 'Connection successful!' as TEST_MESSAGE"
+          snow sql -q "SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE(), CURRENT_DATABASE()" --temporary-connection
+          snow sql -q "SELECT 'Connection successful!' as TEST_MESSAGE" --temporary-connection
