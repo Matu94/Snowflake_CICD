@@ -18,19 +18,12 @@ jobs:
       SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
       SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
       SNOWFLAKE_DATABASE: ${{ secrets.CICD_DEMO_DB }}
-      SNOWFLAKE_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+      SNOWFLAKE_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
       PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
       # FOR KEYPAIR WE NEED TIHS - JSON Web Token
       SNOWFLAKE_AUTHENTICATOR: 'SNOWFLAKE_JWT'
 
     steps:
-      - name: Verify Secret Length
-        shell: bash
-        run: |
-          SECRET_LENGTH1=$(echo -n "${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}" | wc -c)
-          echo "The secret has been loaded and its length is: ${SECRET_LENGTH1} characters."
-          SECRET_LENGTH2=$(echo -n "${{ secrets.SNOWFLAKE_DATABASE }}" | wc -c)
-          echo "The secret has been loaded and its length is: ${SECRET_LENGTH2} characters."
       # Step 1: Installs and configures the Snow CLI using the job-level env vars
       - name: Setup Snow CLI
         uses: snowflakedb/snowflake-cli-action@v1.5
