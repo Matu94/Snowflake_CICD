@@ -1,0 +1,31 @@
+# .github/workflows/test-connection.yml
+
+name: Test Snowflake Connection
+
+# This allows to run the workflow manually from the Actions tab
+on:
+  workflow_dispatch:
+
+jobs:
+  test-snowflake-connection:
+    name: Test Connection to Snowflake
+    runs-on: ubuntu-latest
+
+    steps:
+      # Use the official SnowSQL action
+      - name: Run simple query on Snowflake
+        uses: snowflakedb/snowsql-action@v1.7.0
+        with:
+          # Pass in all the secrets you just created
+          snowflake_account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          snowflake_user: ${{ secrets.SNOWFLAKE_USER }}
+          snowflake_warehouse: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          snowflake_role: ${{ secrets.SNOWFLAKE_ROLE }}
+          snowflake_database: ${{ secrets.SNOWFLAKE_DATABASE }}
+          snowflake_private_key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+          snowflake_private_key_passphrase: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
+
+          # A simple query to verify the connection and context
+          query: |
+            SELECT CURRENT_USER() as "USER", CURRENT_ROLE() as "ROLE", CURRENT_WAREHOUSE() as "WAREHOUSE", CURRENT_DATABASE() as "DATABASE";
+            SELECT 1 + 1 as "RESULT";
