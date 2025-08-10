@@ -1,56 +1,71 @@
-<!doctype html><html><head><title>Snowflake</title><link rel="icon" type="image/png" href="/static/favicon-16.png" sizes="16x16"/><link rel="icon" type="image/png" href="/static/favicon-32.png" sizes="32x32"/><link rel="icon" type="image/png" href="/static/favicon-48.png" sizes="48x48"/><link rel="icon" type="image/png" href="/static/favicon-96.png" sizes="96x96"/><link rel="icon" type="image/png" href="/static/favicon-144.png" sizes="144x144"/><style>body {
-        margin: 0px;
-        padding: 0px;
-        box-sizing: border-box;
-        width: 100%;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-      }
+USE ROLE ACCOUNTADMIN;
 
-      body *,
-      body *::before,
-      body *::after {
-        box-sizing: inherit;
-      }
-      #reactRoot {
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-        align-items: stretch;
-      }
+-- 1. Create a custom role for CI/CD process
+CREATE ROLE IF NOT EXISTS CICD_ROLE;
 
-      .rootLoading {
-        width: 100%;
-        height: 100vh;
-        display: flex;
-      }
+-- 2. Create a warehouse for the CI/CD process
+CREATE WAREHOUSE IF NOT EXISTS CICD_WH
+  WAREHOUSE_SIZE = 'XSMALL'
+  AUTO_SUSPEND = 60
+  AUTO_RESUME = TRUE;
 
-      .rootLoading > svg {
-        display: inline-block;
-        margin: auto;
-        width: 128px;
-        height: 128px;
-        animation: rootLoading 2s ease infinite;
-      }
+-- 3. Create the database
+CREATE DATABASE IF NOT EXISTS CICD_DEMO_DB;
 
-      @keyframes rootLoading {
-        0% {
-          opacity: 1;
-          transform: scale(1);
-        }
-        50% {
-          opacity: 0.3;
-          transform: scale(0.95);
-        }
-      }</style><meta name="viewport" content="width=device-width"/><link rel="preload" href="/static/Inter-Bold-ff699d3134c17db1.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/static/Inter-SemiBold-6ea51c0eff654c89.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/static/Inter-Medium-94afb4f3993a225e.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/static/Inter-Black-1bfc4037b6caea3e.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/static/Inter-Regular-358200361080fccb.woff2" as="font" type="font/woff2" crossorigin></head><body><div id="reactRoot"><div class="rootLoading"><svg aria-label="Loading" role="progressbar" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><defs><style>.cls-1 {
-                fill: none;
-              }
-              .cls-1,
-              .cls-2 {
-                stroke-width: 0px;
-              }
-              .cls-2 {
-                fill: #29b5e8;
-              }</style></defs><path class="cls-1" d="M6.09,5.54s-.13-.05-.18,0l-.37.37s-.05.13,0,.18l.37.37s.13.05.18,0l.37-.37s.05-.13,0-.18l-.37-.37Z"/><path class="cls-2" d="M7.23,5.63l-.85-.85c-.21-.21-.54-.21-.75,0l-.85.85c-.21.21-.21.54,0,.75l.85.85c.21.21.54.21.75,0l.85-.85c.21-.21.21-.54,0-.75ZM6.46,6.09l-.37.37s-.13.05-.18,0l-.37-.37s-.05-.13,0-.18l.37-.37s.13-.05.18,0l.37.37s.05.13,0,.18Z"/><path class="cls-2" d="M1.68,2.85l2.42,1.39c.13.11.3.17.48.17.42,0,.76-.34.76-.76V.76c0-.42-.34-.76-.76-.76s-.76.34-.76.76v1.57l-1.38-.79c-.36-.21-.83-.09-1.04.28-.21.36-.09.83.28,1.04Z"/><path class="cls-2" d="M3.67,6.65s.03-.02.04-.03c0,0,.01,0,.02-.02.01,0,.02-.02.04-.03,0,0,.02-.01.02-.02,0,0,.02-.02.03-.03s.02-.02.03-.03c0,0,.01-.02.02-.02,0-.01.02-.02.03-.04,0,0,.01-.01.01-.02,0-.01.02-.03.03-.04,0,0,0,0,0,0,0,0,0-.01,0-.02,0-.01.01-.03.02-.04,0-.01,0-.02.01-.03,0-.01,0-.02.01-.03,0-.01,0-.03.01-.04,0-.01,0-.02,0-.03,0-.01,0-.03,0-.04,0-.01,0-.02,0-.03,0-.01,0-.03,0-.04,0-.01,0-.02,0-.03,0-.01,0-.03,0-.04s0-.03,0-.04c0-.01,0-.02,0-.03,0-.01,0-.03,0-.04,0-.01,0-.02,0-.03,0-.01,0-.03,0-.04,0-.01,0-.02,0-.03,0-.01,0-.03-.01-.04,0-.01,0-.02-.01-.03,0-.01,0-.02-.01-.03,0-.01-.01-.03-.02-.04,0,0,0-.01,0-.02,0,0,0,0,0,0,0-.01-.02-.03-.03-.04,0,0,0-.01-.02-.02,0-.01-.02-.02-.03-.04,0,0-.01-.02-.02-.02,0,0-.02-.02-.03-.03,0,0-.02-.02-.03-.03,0,0-.02-.01-.02-.02-.01,0-.02-.02-.04-.03,0,0-.01-.01-.02-.02-.01,0-.03-.02-.04-.03,0,0,0,0,0,0l-2.52-1.45c-.36-.21-.83-.09-1.04.28-.21.36-.09.83.28,1.04l1.38.79-1.38.79c-.36.21-.49.67-.28,1.04.21.36.68.49,1.04.28l2.52-1.45s0,0,0,0Z"/><path class="cls-2" d="M4.58,7.59c-.18,0-.35.06-.48.17l-2.42,1.39c-.36.21-.49.67-.28,1.04.21.36.68.49,1.04.28l1.38-.79v1.57c0,.42.34.76.76.76s.76-.34.76-.76v-2.9c0-.42-.34-.76-.76-.76Z"/><path class="cls-2" d="M10.32,9.15l-2.42-1.39c-.13-.11-.3-.17-.48-.17-.42,0-.76.34-.76.76v2.9c0,.42.34.76.76.76s.76-.34.76-.76v-1.57l1.38.79c.36.21.83.09,1.04-.28.21-.36.09-.83-.28-1.04Z"/><path class="cls-2" d="M11.62,6.79l-1.38-.79,1.38-.79c.36-.21.49-.67.28-1.04-.21-.36-.68-.49-1.04-.28l-2.52,1.45s0,0,0,0c-.01,0-.03.02-.04.03,0,0-.01,0-.02.01-.01,0-.02.02-.04.03,0,0-.02.01-.02.02,0,0-.02.02-.03.03,0,0-.02.02-.03.03,0,0-.01.02-.02.02,0,.01-.02.02-.03.04,0,0,0,.01-.02.02,0,.01-.02.03-.03.04,0,0,0,0,0,0,0,0,0,.01,0,.02,0,.01-.01.03-.02.04,0,.01,0,.02-.01.03,0,.01,0,.02-.01.03,0,.01,0,.03-.01.04,0,.01,0,.02,0,.03,0,.01,0,.03,0,.04,0,.01,0,.02,0,.03,0,.01,0,.03,0,.04,0,.01,0,.02,0,.03,0,.01,0,.03,0,.04s0,.03,0,.04c0,.01,0,.02,0,.03,0,.01,0,.03,0,.04,0,.01,0,.02,0,.03,0,.01,0,.03,0,.04,0,.01,0,.02,0,.03,0,.01,0,.03.01.04,0,.01,0,.02.01.03,0,.01,0,.02.01.03,0,.01.01.03.02.04,0,0,0,.01,0,.02,0,0,0,0,0,0,0,.01.02.03.03.04,0,0,0,.01.02.02,0,.01.02.02.03.04,0,0,.01.02.02.02,0,0,.02.02.03.03,0,0,.02.02.03.03,0,0,.02.01.02.02.01,0,.02.02.04.03,0,0,.01,0,.02.01.01,0,.03.02.04.03,0,0,0,0,0,0l2.52,1.45c.36.21.83.09,1.04-.28.21-.36.09-.83-.28-1.04Z"/><path class="cls-2" d="M7.42,4.41c.18,0,.35-.06.48-.17l2.42-1.39c.36-.21.49-.67.28-1.04-.21-.36-.68-.49-1.04-.28l-1.38.79V.76c0-.42-.34-.76-.76-.76s-.76.34-.76.76v2.9c0,.42.34.76.76.76Z"/></svg></div></div><link rel="stylesheet" href="/static/generated-styles.7d23d88969e05f47a62cebe5d289466d.css"/><link href="/static/manifest-250804-2-4a2909f26c9.json" rel="preload" type="application/json" as="fetch" crossorigin="anonymous"><link href="/static/localization/en-US.250804-2-4a2909f26c9.json" rel="preload" type="application/json" as="fetch" crossorigin="anonymous"><script src="/static/bootloader.10c640f5.js"></script></body></html>
+-- 4. Grant privileges to the new role
+GRANT USAGE ON WAREHOUSE CICD_WH TO ROLE CICD_ROLE;
+GRANT USAGE ON DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT CREATE SCHEMA ON DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+
+
+-- 5. FUTURE GRANTS: Apply permissions automatically to all NEW objects created in the database --
+
+-- Grant comprehensive permissions on all FUTURE schemas
+GRANT ALL PRIVILEGES ON FUTURE SCHEMAS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+
+-- Grant permissions for all types of objects that will be created within FUTURE schemas
+GRANT ALL PRIVILEGES ON FUTURE TABLES IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE VIEWS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE STAGES IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE FILE FORMATS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE SEQUENCES IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE STREAMS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE TASKS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE PIPES IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE PROCEDURES IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT ALL PRIVILEGES ON FUTURE FUNCTIONS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+
+-- Grants for specific objects like Alerts and Streamlit Apps
+GRANT CREATE ALERT ON ALL SCHEMAS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+GRANT CREATE STREAMLIT ON ALL SCHEMAS IN DATABASE CICD_DEMO_DB TO ROLE CICD_ROLE;
+
+
+-- 6, Create a user
+CREATE USER IF NOT EXISTS CICD_USER
+  DEFAULT_ROLE = CICD_ROLE
+  DEFAULT_WAREHOUSE = CICD_WH
+  MUST_CHANGE_PASSWORD = FALSE;
+
+-- Grant the custom role to the new user
+GRANT ROLE CICD_ROLE TO USER CICD_USER;
+
+
+/* I use Keypair auth so here is have to set it up:
+using OpenSSL on local machine. Run this commands in the terminal
+
+This command creates a 2048-bit RSA private key:
+openssl genrsa -out snowflake_cicd_key.p8 2048
+
+Generates public key:
+openssl rsa -in snowflake_cicd_key.p8 -pubout -out snowflake_cicd_key.pub
+
+So end of the day we have 2 files: 
+.p8 is the private key
+.pub is the publick key
+*/
+
+-- Add the publick key to the user:
+ALTER USER CICD_USER
+    SET RSA_PUBLIC_KEY = 'putyourkeyhere';
+
+
