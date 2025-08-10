@@ -12,24 +12,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Use the official SnowSQL action
-      - name: Run simple query on Snowflake
+      # Step 1: Install and configure the Snowflake CLI
+      - name: Setup Snow CLI
         uses: snowflakedb/snowflake-cli-action@v1.5
-        env:
           
+      # Step 2: Run commands using the now-installed Snow CLI
+      - name: Run test queries
+        env:
+          # Provide all credentials to the environment for this step
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.CICD_DEMO_DB }} # Corrected to match your setup
-              
+          SNOWFLAKE_DATABASE: ${{ secrets.CICD_DEMO_DB }}
           SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
-          SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }} # Note the different name
-
+          SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
         run: |
-          # Use the 'snow' command to run queries
-          echo "Testing connection and context..."
-          snow sql -q "SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE(), CURRENT_DATABASE()"
+          echo "Verifying Snow CLI installation..."
+          snow --version
 
-          echo "Running a simple query..."
-          snow sql -q "SELECT 1 + 1 as RESULT"
+          echo "Testing connection and running queries..."
+          snow sql -q "SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE(), CURRENT_DATABASE()"
+          snow sql -q "SELECT 'Connection successful!' as TEST_MESSAGE"
