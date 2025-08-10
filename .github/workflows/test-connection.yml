@@ -2,7 +2,6 @@
 
 name: Test Snowflake Connection
 
-# This allows to run the workflow manually from the Actions tab
 on:
   workflow_dispatch:
 
@@ -11,22 +10,24 @@ jobs:
     name: Test Connection to Snowflake
     runs-on: ubuntu-latest
 
+    # Define environment variables at the job level
+    # This makes them available to all steps below
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.CICD_DEMO_DB }}
+      SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+      PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
+
     steps:
-      # Step 1: Install and configure the Snowflake CLI
+      # Step 1: Installs and configures the Snow CLI using the job-level env vars
       - name: Setup Snow CLI
         uses: snowflakedb/snowflake-cli-action@v1.5
-          
-      # Step 2: Run commands using the now-installed Snow CLI
+
+      # Step 2: Runs commands using the now-configured CLI
       - name: Run test queries
-        env:
-          # Provide all credentials to the environment for this step
-          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.CICD_DEMO_DB }}
-          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
-          SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
         run: |
           echo "Verifying Snow CLI installation..."
           snow --version
