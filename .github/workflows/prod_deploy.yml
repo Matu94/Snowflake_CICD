@@ -1,0 +1,58 @@
+name: Deploy Modified Files to Snowflake PROD env
+
+#triggers ONLY on a push to the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-snowflake-changes:
+    name: Deploy to Snowflake
+    runs-on: ubuntu-latest
+
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.CICD_DEMO_DB }}
+      SNOWFLAKE_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
+      PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
+      SNOWFLAKE_AUTHENTICATOR: 'SNOWFLAKE_JWT'
+
+    steps:
+      # Check out the repository's code.
+      # fetch-depth: 0 - get all commit history for the git diff command.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Snow CLI
+        uses: snowflakedb/snowflake-cli-action@v1.5
+
+      - name: Find and Deploy Modified SQL Files
+        run: |
+          echo "Identifying changed files..."
+          
+          # This command compares the latest commit with the one before it,
+          # filtering for Added (A) or Modified (M) .sql files within the Snowflake folder.
+          FILES_TO_DEPLOY=$(git diff --name-only --diff-filter=AM ${{ github.event.before }} ${{ github.event.after }} -- 'Snowflake/**/*.sql' || true)
+
+          if [ -z "$FILES_TO_DEPLOY" ]; then
+            echo "No new or modified SQL files to deploy."
+            exit 0
+          fi
+
+          echo "The following files will be deployed:"
+          echo "$FILES_TO_DEPLOY"
+
+          # Loop through each changed file and execute it using the Snow CLI
+          for FILE in $FILES_TO_DEPLOY; do
+            echo "--------------------------------------------------"
+            echo "Executing: $FILE"
+            snow sql -f "$FILE" --temporary-connection
+            echo "Finished: $FILE"
+            echo "--------------------------------------------------"
+          done
