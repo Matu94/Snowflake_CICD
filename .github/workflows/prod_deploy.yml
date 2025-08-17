@@ -36,16 +36,13 @@ jobs:
         run: |
           echo "Identifying changed files..."
           
-          # This command compares the latest commit with the one before it,
-          # inspects the commit itself to find all changed .sql files.
-          CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep '\(Snowflake/.*\.sql\)' || true)
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- 'Snowflake/**/*.sql' || true)
 
           if [ -z "$CHANGED_FILES" ]; then
-            echo "No new or modified SQL files to deploy."
+            echo "No modified SQL files found in this push."
             exit 0
           fi
           
-          # Sort the files alphabetically(prio order based on the folder prefix) to ensure correct deployment order         
           FILES_TO_DEPLOY=$(echo "$CHANGED_FILES" | sort)
 
           echo "The following files will be deployed in this order:"
@@ -55,28 +52,22 @@ jobs:
             if [ -n "$FILE" ]; then
               echo "--------------------------------------------------"
               echo "Executing: $FILE"
-              # Execute the file and capture any errors
               OUTPUT=$(snow sql -f "$FILE" --temporary-connection 2>&1)
               EXIT_CODE=$?
 
-              # ✅ START LOGGING BLOCK
               if [ $EXIT_CODE -eq 0 ]; then
-                # If successful, log a SUCCESS status
                 STATUS="SUCCESS"
                 ERROR_MSG=""
                 echo "Successfully executed $FILE"
               else
-                # If it fails, log a FAILED status and the error message
                 STATUS="FAILED"
-                ERROR_MSG=$(echo "$OUTPUT" | sed "s/'/''/g") # Escape single quotes for SQL
+                ERROR_MSG=$(echo "$OUTPUT" | sed "s/'/''/g")
                 echo "Execution of $FILE failed with error: $OUTPUT"
               fi
               
-              # Insert the log record into the history table
-              LOG_QUERY="INSERT INTO CICD_DEMO_DB.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG');"
+              LOG_QUERY="INSERT INTO CICD_DEMO_DB.PUBLIC.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG');"
               snow sql -q "$LOG_QUERY" --temporary-connection
               echo "Logged deployment for $FILE with status: $STATUS"
-              # ✅ END LOGGING BLOCK
               
               echo "--------------------------------------------------"
             fi
