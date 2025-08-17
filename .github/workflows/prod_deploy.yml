@@ -44,6 +44,9 @@ jobs:
             echo "No new or modified SQL files to deploy."
             exit 0
           fi
+          
+          # Sort the files alphabetically(prio order based on the folder prefix) to ensure correct deployment order
+          FILES_TO_DEPLOY=$(echo "$CHANGED_FILES" | sort)
 
           echo "The following files will be deployed:"
           echo "$FILES_TO_DEPLOY"
