@@ -44,27 +44,35 @@ jobs:
           fi
           
           FILES_TO_DEPLOY=$(echo "$CHANGED_FILES" | sort)
-
           echo "The following files will be deployed in this order:"
           echo "$FILES_TO_DEPLOY"
+
+          # Initialize a variable to track if any script has failed.
+          OVERALL_STATUS=0
 
           while IFS= read -r FILE; do
             if [ -n "$FILE" ]; then
               echo "--------------------------------------------------"
               echo "Executing: $FILE"
-              OUTPUT=$(snow sql -f "$FILE" --temporary-connection 2>&1)
-              EXIT_CODE=$?
-
-              if [ $EXIT_CODE -eq 0 ]; then
+              
+              # Use an if/else block to gracefully handle errors without stopping the script.
+              # We redirect the output to a temporary file to capture it.
+              if snow sql -f "$FILE" --temporary-connection > output.log 2>&1; then
+                # This block runs if the command was successful
                 STATUS="SUCCESS"
                 ERROR_MSG=""
                 echo "Successfully executed $FILE"
               else
+                # This block runs if the command failed
                 STATUS="FAILED"
-                ERROR_MSG=$(echo "$OUTPUT" | sed "s/'/''/g")
-                echo "Execution of $FILE failed with error: $OUTPUT"
+                # Read the error from the log file and escape single quotes
+                ERROR_MSG=$(cat output.log | sed "s/'/''/g")
+                echo "Execution of $FILE failed with error: $ERROR_MSG"
+                # Set the overall status to failed (1)
+                OVERALL_STATUS=1
               fi
               
+              # This logging part now runs for both SUCCESS and FAILED attempts
               LOG_QUERY="INSERT INTO CICD_DEMO_DB.PUBLIC.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG');"
               snow sql -q "$LOG_QUERY" --temporary-connection
               echo "Logged deployment for $FILE with status: $STATUS"
@@ -72,3 +80,9 @@ jobs:
               echo "--------------------------------------------------"
             fi
           done <<< "$FILES_TO_DEPLOY"
+
+          # After the loop, if OVERALL_STATUS is 1, exit with an error to fail the entire job.
+          if [ $OVERALL_STATUS -eq 1 ]; then
+            echo "One or more SQL scripts failed. Failing the workflow."
+            exit 1
+          fi
