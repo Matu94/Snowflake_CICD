@@ -1,6 +1,6 @@
 name: Deploy Modified Files to Snowflake PROD env
 
-#triggers ONLY on a push to the main branch
+# Triggers ONLY on a push to the main branch
 on:
   push:
     branches:
@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup Snow CLI
         uses: snowflakedb/snowflake-cli-action@v1.5
 
