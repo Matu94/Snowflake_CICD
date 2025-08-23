@@ -52,15 +52,17 @@ jobs:
               if snow sql -f "$FILE" --temporary-connection > output.log 2>&1; then
                 STATUS="SUCCESS"
                 ERROR_MSG=""
+                TYPE="FULL DEPLOY"
                 echo "Successfully executed $FILE"
               else
                 STATUS="FAILED"
                 ERROR_MSG=$(cat output.log | sed "s/'/''/g")
                 echo "Execution of $FILE failed with error: $ERROR_MSG"
+                TYPE="FULL DEPLOY"
                 OVERALL_STATUS=1
               fi
               
-              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, TYPE, ERROR_MESSAGE) VALUES ('$FILE (Full Deploy)', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', 'FULL', '$ERROR_MSG');"
+              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, TYPE, ERROR_MESSAGE) VALUES ('$FILE (Full Deploy)', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$FULL', '$ERROR_MSG');"
               snow sql -q "$LOG_QUERY" --temporary-connection
               echo "Logged deployment for $FILE with status: $STATUS"
               
