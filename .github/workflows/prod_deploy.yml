@@ -54,7 +54,7 @@ jobs:
 
           # This variable will track if any script fails during the loop.
           OVERALL_STATUS=0
-          TYPE = NORMAL DEPLOY
+          TYPE = "NORMAL DEPLOY"
 
           # Loop through each file that needs to be deployed.
           while IFS= read -r FILE; do
