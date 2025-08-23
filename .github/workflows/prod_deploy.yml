@@ -67,7 +67,6 @@ jobs:
                 # This block runs on SUCCESS.
                 STATUS="SUCCESS"
                 ERROR_MSG=""
-                TYPE = "NORMAL DEPLOY"
                 echo "Successfully executed $FILE"
               else
                 # This block runs on FAILURE.
@@ -75,13 +74,12 @@ jobs:
                 # Capture the error message from the output file.
                 ERROR_MSG=$(cat output.log | sed "s/'/''/g")
                 echo "Execution of $FILE failed with error: $ERROR_MSG"
-                TYPE = "NORMAL DEPLOY"
                 # Mark the entire job as failed.
                 OVERALL_STATUS=1
               fi
               
               # Construct and run a SQL query to log the outcome (SUCCESS or FAILED) to the history table.
-              LOG_QUERY="INSERT INTO CICD_DEMO_DB.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, TYPE, ERROR_MESSAGE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$TYPE', '$ERROR_MSG');"
+              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.PUBLIC.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE, TYPE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG', 'NORMAL DEPLOY');"
               snow sql -q "$LOG_QUERY" --temporary-connection
               echo "Logged deployment for $FILE with status: $STATUS"
               
