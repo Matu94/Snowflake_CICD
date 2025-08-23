@@ -54,7 +54,6 @@ jobs:
 
           # This variable will track if any script fails during the loop.
           OVERALL_STATUS=0
-          TYPE = "NORMAL DEPLOY"
 
           # Loop through each file that needs to be deployed.
           while IFS= read -r FILE; do
@@ -68,6 +67,7 @@ jobs:
                 # This block runs on SUCCESS.
                 STATUS="SUCCESS"
                 ERROR_MSG=""
+                TYPE = "NORMAL DEPLOY"
                 echo "Successfully executed $FILE"
               else
                 # This block runs on FAILURE.
@@ -75,6 +75,7 @@ jobs:
                 # Capture the error message from the output file.
                 ERROR_MSG=$(cat output.log | sed "s/'/''/g")
                 echo "Execution of $FILE failed with error: $ERROR_MSG"
+                TYPE = "NORMAL DEPLOY"
                 # Mark the entire job as failed.
                 OVERALL_STATUS=1
               fi
