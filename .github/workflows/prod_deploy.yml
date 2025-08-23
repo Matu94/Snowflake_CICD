@@ -79,7 +79,7 @@ jobs:
               fi
               
               # Construct and run a SQL query to log the outcome (SUCCESS or FAILED) to the history table.
-              LOG_QUERY="INSERT INTO CICD_DEMO_DB.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG');"
+              LOG_QUERY="INSERT INTO CICD_DEMO_DB.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, TYPE, ERROR_MESSAGE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', 'NORMAL', '$ERROR_MSG');"
               snow sql -q "$LOG_QUERY" --temporary-connection
               echo "Logged deployment for $FILE with status: $STATUS"
               
