@@ -67,7 +67,7 @@ jobs:
               fi
               
               # Log this action with a specific TYPE for clear auditing
-              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.PUBLIC.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE, TYPE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG', 'REDEPLOY');"
+              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE, TYPE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG', 'REDEPLOY');"
               snow sql -q "$LOG_QUERY" --temporary-connection
               echo "Logged redeployment for $FILE with status: $STATUS"
               
