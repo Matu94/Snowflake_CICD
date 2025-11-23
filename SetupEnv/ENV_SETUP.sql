@@ -1,13 +1,15 @@
 USE ROLE ACCOUNTADMIN;
 
 -- 1. Create a custom role for CI/CD process
-CREATE ROLE IF NOT EXISTS CICD_ROLE;
+CREATE ROLE IF NOT EXISTS CICD_ROLE
+  COMMENT = 'CICD project: Warehouse for CICD workloads';
 
 -- 2. Create a warehouse for the CI/CD process
 CREATE WAREHOUSE IF NOT EXISTS CICD_WH
   WAREHOUSE_SIZE = 'XSMALL'
   AUTO_SUSPEND = 60
-  AUTO_RESUME = TRUE;
+  AUTO_RESUME = TRUE
+  COMMENT = 'CICD project: Warehouse for CICD workloads';
 
 -- 3. Create the database
 CREATE DATABASE IF NOT EXISTS CICD_DEMO_DB;
