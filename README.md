@@ -1,6 +1,5 @@
 -----
 
-
 ## Tech Stack:
 
 ![Snowflake](https://img.shields.io/badge/Snowflake-2C9DCB?style=for-the-badge&logo=Snowflake&logoColor=white)
@@ -8,7 +7,6 @@
 ![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
 
 -----
-
 
 # Simple Snowflake CI/CD Pipeline with GitHub Actions
 
