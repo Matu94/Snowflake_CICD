@@ -1,6 +1,6 @@
 -----
 
-## Tech Stack:
+# Tech Stack:
 
 ![Snowflake](https://img.shields.io/badge/Snowflake-2C9DCB?style=for-the-badge&logo=Snowflake&logoColor=white)
 ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)
