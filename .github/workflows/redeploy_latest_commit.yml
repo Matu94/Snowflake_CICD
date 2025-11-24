@@ -31,51 +31,97 @@ jobs:
 
       - name: Find, Sort, and Redeploy SQL Files
         run: |
-          echo "Finding files from the latest commit on the main branch..."
-          
-          # This command compares the latest commit (HEAD) with the one before it (HEAD~1)
-          # to find the files that were part of that last commit.
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD -- 'Snowflake/**/*.sql' || true)
+          echo "Detecting added, modified, and deleted SQL files in the last commit..."
 
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "No .sql files found in the latest commit."
+          # Detect added (A) and modified (M) SQL files
+          ADDED_MODIFIED_FILES=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'Snowflake/**/*.sql' || true)
+
+          # Detect deleted (D) SQL files
+          DELETED_FILES=$(git diff --name-only --diff-filter=D HEAD~1 HEAD -- 'Snowflake/**/*.sql' || true)
+
+          if [ -z "$ADDED_MODIFIED_FILES" ] && [ -z "$DELETED_FILES" ]; then
+            echo "No SQL changes detected in this commit."
             exit 0
           fi
 
-          # Sort the files to ensure correct deployment order
-          FILES_TO_DEPLOY=$(echo "$CHANGED_FILES" | sort)
-
-          echo "The following files will be redeployed in this order:"
-          echo "$FILES_TO_DEPLOY"
+          echo "--------------------------------------------------"
+          echo "Files to deploy (added or modified):"
+          echo "$ADDED_MODIFIED_FILES"
+          echo "--------------------------------------------------"
+          echo "Files deleted (tables to drop):"
+          echo "$DELETED_FILES"
+          echo "--------------------------------------------------"
 
           OVERALL_STATUS=0
+
+          ########################################
+          # 1) HANDLE DELETED FILES  (DROP TABLE)
+          ########################################
+
+          for FILE in $DELETED_FILES; do
+            BASENAME=$(basename "$FILE" .sql)
+
+            echo "Dropping table associated with deleted file: $BASENAME"
+
+            DROP_QUERY="DROP TABLE IF EXISTS $BASENAME;"
+
+            if snow sql -q "$DROP_QUERY" --temporary-connection > output.log 2>&1; then
+              STATUS="SUCCESS"
+              ERROR_MSG=""
+              echo "Successfully executed DROP TABLE for $BASENAME"
+            else
+              STATUS="FAILED"
+              ERROR_MSG=$(sed "s/'/''/g" output.log)
+              echo "DROP TABLE failed for $BASENAME with error: $ERROR_MSG"
+              OVERALL_STATUS=1
+            fi
+
+            LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.TECH.DEPLOYMENT_HISTORY 
+                      (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE, TYPE)
+                      VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG', 'DROP');"
+                      
+            snow sql -q "$LOG_QUERY" --temporary-connection
+            echo "Logged DROP operation for deleted file: $FILE"
+          done
+
+          ########################################
+          # 2) HANDLE ADDED OR MODIFIED FILES
+          ########################################
+
+          # Sort files to ensure a deterministic order
+          FILES_TO_DEPLOY=$(echo "$ADDED_MODIFIED_FILES" | sort)
 
           while IFS= read -r FILE; do
             if [ -n "$FILE" ]; then
               echo "--------------------------------------------------"
-              echo "Executing: $FILE"
-              
+              echo "Executing SQL file: $FILE"
+
               if snow sql -f "$FILE" --temporary-connection > output.log 2>&1; then
                 STATUS="SUCCESS"
                 ERROR_MSG=""
                 echo "Successfully executed $FILE"
               else
                 STATUS="FAILED"
-                ERROR_MSG=$(cat output.log | sed "s/'/''/g")
+                ERROR_MSG=$(sed "s/'/''/g" output.log)
                 echo "Execution of $FILE failed with error: $ERROR_MSG"
                 OVERALL_STATUS=1
               fi
-              
-              # Log this action with a specific TYPE for clear auditing
-              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE, TYPE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG', 'REDEPLOY');"
+
+              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.TECH.DEPLOYMENT_HISTORY 
+                        (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, ERROR_MESSAGE, TYPE)
+                        VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', '$ERROR_MSG', 'CREATE_OR_UPDATE');"
+
               snow sql -q "$LOG_QUERY" --temporary-connection
-              echo "Logged redeployment for $FILE with status: $STATUS"
-              
-              echo "--------------------------------------------------"
+              echo "Logged deployment for $FILE with status: $STATUS"
             fi
           done <<< "$FILES_TO_DEPLOY"
+
+          ########################################
 
           if [ $OVERALL_STATUS -eq 1 ]; then
             echo "One or more SQL scripts failed. Failing the workflow."
             exit 1
           fi
+
+          echo "All operations completed successfully."
+          exit 0
