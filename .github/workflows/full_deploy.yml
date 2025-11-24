@@ -1,0 +1,74 @@
+name: Full/Init Snowflake Deployment
+
+# This workflow is triggered manually from the GitHub Actions tab
+on:
+  workflow_dispatch:
+
+jobs:
+  full-deploy-snowflake:
+    name: Deploy All Snowflake Objects
+    runs-on: ubuntu-latest
+
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_PRIVATE_KEY_RAW: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_RAW }}
+      PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}
+      SNOWFLAKE_AUTHENTICATOR: 'SNOWFLAKE_JWT'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Snow CLI
+        uses: snowflakedb/snowflake-cli-action@v1.5
+
+      - name: Find, Sort, and Deploy All SQL Files
+        run: |
+          echo "Finding all .sql files in the 'Snowflake' directory..."
+          
+          # Use the 'find' command to get ALL .sql files, then sort them.
+          # This ignores commit history entirely.
+          FILES_TO_DEPLOY=$(find Snowflake -type f -name "*.sql" | sort)
+
+          if [ -z "$FILES_TO_DEPLOY" ]; then
+            echo "No .sql files found in the Snowflake directory."
+            exit 0
+          fi
+
+          echo "The following files will be deployed in this order:"
+          echo "$FILES_TO_DEPLOY"
+
+          OVERALL_STATUS=0
+
+          while IFS= read -r FILE; do
+            if [ -n "$FILE" ]; then
+              echo "--------------------------------------------------"
+              echo "Executing: $FILE"
+              
+              if snow sql -f "$FILE" --temporary-connection > output.log 2>&1; then
+                STATUS="SUCCESS"
+                ERROR_MSG=""
+                echo "Successfully executed $FILE"
+              else
+                STATUS="FAILED"
+                ERROR_MSG=$(cat output.log | sed "s/'/''/g")
+                echo "Execution of $FILE failed with error: $ERROR_MSG"
+                OVERALL_STATUS=1
+              fi
+              
+              LOG_QUERY="INSERT INTO ${{ env.SNOWFLAKE_DATABASE }}.TECH.DEPLOYMENT_HISTORY (FILENAME, COMMIT_SHA, GITHUB_ACTOR, STATUS, TYPE, ERROR_MESSAGE) VALUES ('$FILE', '${{ github.sha }}', '${{ github.actor }}', '$STATUS', 'FULL DEPLOY', '$ERROR_MSG');"
+              snow sql -q "$LOG_QUERY" --temporary-connection
+              echo "Logged deployment for $FILE with status: $STATUS"
+              
+              echo "--------------------------------------------------"
+            fi
+          done <<< "$FILES_TO_DEPLOY"
+
+          if [ $OVERALL_STATUS -eq 1 ]; then
+            echo "One or more SQL scripts failed. Failing the workflow."
+            exit 1
+          fi

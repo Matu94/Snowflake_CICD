@@ -1,29 +1,41 @@
 -----
 
+
 # Simple Snowflake CI/CD Pipeline with GitHub Actions
 
 This repository demonstrates a simple, effective, and production-ready CI/CD pipeline for managing and deploying Snowflake database objects using GitHub Actions.
 
-The pipeline is designed to be **declarative and idempotent**. It automatically deploys only the `.sql` files that have been modified in a push to the `main` branch, ensuring that deployments are fast, safe, and predictable.
+The pipeline is designed to be **declarative and idempotent**. It supports two deployment methods:
+
+1.  **Incremental Deployment**: Automatically deploys only the `.sql` files that have been modified in a push.
+2.  **Full Deployment**: Manually triggered to deploy *all* `.sql` files, which is useful for rebuilding an environment.
 
 -----
 
 ## How It Works ⚙️
 
-The CI/CD process is built around a standard Git branching strategy (`DEV` -\> `main`) and a powerful GitHub Actions workflow.
+The CI/CD process is built around a standard Git branching strategy (`DEV` -\> `main`) and two powerful GitHub Actions workflows.
 
 ### Branching Strategy
 
-  * **`main` branch**: This is the **Production** branch. Any commit to this branch triggers the production deployment workflow. Direct commits should be avoided; changes should only come from Pull Requests.
-  * **`DEV` branch**: This is the **Development** branch. All new work, such as creating or modifying schemas, tables, and views, happens here. This branch can be pushed to freely without affecting production.
+  * **`main` branch**: This is the **Production** branch. Any commit to this branch triggers the incremental production deployment workflow.
+  * **`DEV` branch**: This is the **Development** branch. All new work happens here.
 
-### The CI/CD Pipeline
+### The CI/CD Pipelines
 
-  * **Trigger**: The workflow is triggered automatically on every `push` to the `main` branch (e.g., when a pull request from `DEV` is merged).
-  * **File Detection**: It uses a `git diff` command to intelligently identify a precise list of `.sql` files that were added or modified in the push.
-  * **Deployment Order**: It **sorts** the list of changed files alphabetically. This is crucial for ensuring database objects are created in the correct order of dependency (e.g., schemas are created before the tables within them).
-  * **Execution**: The workflow iterates through the sorted list and executes each `.sql` script against the target Snowflake environment.
-  * **Monitoring**: Every deployment attempt—whether it succeeds or fails—is automatically logged into a `DEPLOYMENT_HISTORY` table in Snowflake for auditing and traceability.
+  * **Incremental Deployment (`prod_deploy.yml`)**:
+
+      * **Trigger**: Runs automatically on every `push` to the `main` branch.
+      * **Logic**: Uses `git diff` to find only the `.sql` files that were changed in the push.
+      * **Logging**: Records each deployment in the history table with the type `'NORMAL DEPLOY'`.
+
+  * **Full Deployment (`full_deploy.yml`)**:
+
+      * **Trigger**: Must be run **manually** from the GitHub Actions tab.
+      * **Logic**: Uses `find` to get a list of *every single* `.sql` file in the `Snowflake` folder, ignoring commit history.
+      * **Logging**: Records each deployment in the history table with the type `'FULL DEPLOY'`.
+
+Both pipelines sort the files alphabetically to ensure a correct deployment order (e.g., schemas before tables) and log every success or failure to a history table for auditing.
 
 -----
 
@@ -84,12 +96,13 @@ GRANT ROLE CICD_ROLE TO USER CICD_USER;
 #### D. Create the Monitoring Table
 
 ```sql
-CREATE TABLE IF NOT EXISTS CICD_PROD_DB.PUBLIC.DEPLOYMENT_HISTORY (
+CREATE TABLE IF NOT EXISTS CICD_PROD_DB.TECH.DEPLOYMENT_HISTORY (
     DEPLOYMENT_TIMESTAMP TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     FILENAME VARCHAR,
     COMMIT_SHA VARCHAR,
     GITHUB_ACTOR VARCHAR,
     STATUS VARCHAR,
+    TYPE VARCHAR,
     ERROR_MESSAGE VARCHAR
 );
 ```
@@ -112,16 +125,20 @@ In your GitHub repository, go to **Settings \> Secrets and variables \> Actions*
 
 ## How to Use 🚀
 
-1.  **Develop on the `DEV` branch.** Create or modify your `.sql` files inside the appropriate `Snowflake/` subdirectories.
+### Incremental Deployment (Standard Workflow)
+
+1.  **Develop on the `DEV` branch.** Create or modify your `.sql` files.
 2.  **Commit and push** your changes to the `DEV` branch.
-    ```bash
-    git add .
-    git commit -m "feat: Add new customer view"
-    git push origin DEV
-    ```
-3.  **Create a Pull Request.** When you are ready to deploy, open a pull request on GitHub from `DEV` to `main`.
-4.  **Merge the Pull Request.** Once the PR is approved, merge it. This action will trigger the production deployment workflow.
-5.  **Monitor the deployment** in the **Actions** tab of your repository and check the `DEPLOYMENT_HISTORY` table in Snowflake.
+3.  **Create a Pull Request** from `DEV` to `main`.
+4.  **Merge the Pull Request.** This automatically triggers the incremental deployment.
+
+### Full Deployment (Manual Workflow)
+
+Use this for rebuilding an environment or performing a clean installation.
+
+1.  Go to the **Actions** tab in your GitHub repository.
+2.  In the left sidebar, click on the **"Full Snowflake Deployment"** workflow.
+3.  Click the **"Run workflow"** dropdown button, and then click the green **"Run workflow"** button to start the deployment.
 
 -----
 
