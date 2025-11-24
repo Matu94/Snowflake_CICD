@@ -63,7 +63,7 @@ jobs:
 
             echo "Dropping table associated with deleted file: $BASENAME"
 
-            DROP_QUERY="DROP TABLE IF EXISTS $BASENAME;"
+            DROP_QUERY="DROP TABLE IF EXISTS ${{ env.SNOWFLAKE_DATABASE }}.TECH.$BASENAME;"
 
             if snow sql -q "$DROP_QUERY" --temporary-connection > output.log 2>&1; then
               STATUS="SUCCESS"
